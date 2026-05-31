@@ -1,0 +1,238 @@
+import streamlit as st
+import pandas as pd
+import joblib
+
+st.set_page_config(
+    page_title="Obesity Risk Prediction Tool",
+    page_icon="image.png",
+    layout="wide"
+)
+
+st.markdown("""
+<style>
+[data-testid="stAppViewContainer"] {
+    background-color: #eef2f7;
+}
+
+[data-testid="stHeader"] {
+    background-color: rgba(0,0,0,0);
+}
+
+.hero-box {
+    background: linear-gradient(90deg, #1f4e79, #3B82F6);
+    padding: 35px;
+    border-radius: 18px;
+    text-align: center;
+    color: white;
+    margin-bottom: 25px;
+    box-shadow: 0px 4px 15px rgba(0,0,0,0.15);
+}
+
+.hero-box h1 {
+    font-size: 44px;
+    margin-bottom: 10px;
+}
+
+.hero-box p {
+    font-size: 18px;
+    margin-top: 0px;
+}
+
+.info-box {
+    background-color: white;
+    padding: 22px;
+    border-radius: 15px;
+    box-shadow: 0px 3px 12px rgba(0,0,0,0.10);
+    margin-bottom: 25px;
+    font-size: 17px;
+}
+
+.section-box {
+    background-color: white;
+    padding: 22px;
+    border-radius: 15px;
+    box-shadow: 0px 3px 12px rgba(0,0,0,0.08);
+    margin-bottom: 18px;
+}
+
+.result-box {
+    background-color: #E0F2FE;
+    padding: 28px;
+    border-radius: 18px;
+    text-align: center;
+    border: 2px solid #3B82F6;
+    margin-top: 25px;
+}
+
+.result-box h2 {
+    color: #1f4e79;
+    margin-bottom: 5px;
+}
+
+.result-box h1 {
+    color: #0F172A;
+    font-size: 38px;
+}
+
+.stButton>button {
+    background-color: #2563EB;
+    color: white;
+    border-radius: 12px;
+    height: 3em;
+    width: 100%;
+    font-size: 18px;
+    border: none;
+    font-weight: bold;
+}
+
+.stButton>button:hover {
+    background-color: #1D4ED8;
+    color: white;
+}
+
+div[data-testid="stMetricValue"] {
+    color: #1f4e79;
+}
+</style>
+""", unsafe_allow_html=True)
+
+model = joblib.load("obesity_model.pkl")
+
+st.sidebar.title("About This Tool")
+st.sidebar.write("This prototype uses a trained Random Forest model to predict obesity levels.")
+st.sidebar.write("It is designed for educational and healthcare awareness purposes only.")
+st.sidebar.markdown("---")
+st.sidebar.write("Model used: Random Forest")
+st.sidebar.write("Framework: Streamlit")
+
+st.markdown("""
+<div class="hero-box">
+    <h1>Obesity Risk Prediction Tool</h1>
+    <p>AI-powered obesity risk assessment using health, lifestyle, and behavioural data</p>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div class="info-box">
+    <b>Obesity Risk Assessment Powered by Machine Learning</b><br><br>
+    Enter your health and lifestyle information below to receive an instant obesity risk prediction and personalised feedback.
+</div>
+""", unsafe_allow_html=True)
+
+st.subheader("Enter Your Health and Lifestyle Information")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown('<div class="section-box">', unsafe_allow_html=True)
+
+    gender = st.selectbox("Gender", ["Male", "Female"])
+
+    age = st.slider("Age (years)", 10, 100, 25)
+
+    height = st.number_input(
+        "Height (metres, e.g. 1.75)",
+        min_value=1.0,
+        max_value=2.5,
+        value=1.70
+    )
+
+    weight = st.number_input(
+        "Weight (kg)",
+        min_value=20.0,
+        max_value=200.0,
+        value=70.0
+    )
+
+    family_history = st.selectbox(
+        "Family History With Overweight",
+        ["yes", "no"]
+    )
+
+    favc = st.selectbox(
+        "Frequent High Calorie Food Consumption",
+        ["yes", "no"]
+    )
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with col2:
+    st.markdown('<div class="section-box">', unsafe_allow_html=True)
+
+    fcvc = st.slider("Vegetable Consumption Frequency", 1, 3, 2)
+
+    ncp = st.slider("Main Meals Per Day", 1, 5, 3)
+
+    caec = st.selectbox(
+        "Eating Between Meals",
+        ["no", "Sometimes", "Frequently", "Always"]
+    )
+
+    smoke = st.selectbox("Do You Smoke?", ["yes", "no"])
+
+    ch2o = st.slider("Daily Water Consumption", 1, 5, 2)
+
+    faf = st.slider("Physical Activity Frequency", 0, 5, 2)
+
+    tue = st.slider("Technology Usage Time", 0, 5, 2)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.write("")
+
+if st.button("Predict Obesity Level"):
+
+    input_data = pd.DataFrame({
+        "Gender": [gender],
+        "Age": [age],
+        "Height": [height],
+        "Weight": [weight],
+        "family_history_with_overweight": [family_history],
+        "FAVC": [favc],
+        "FCVC": [fcvc],
+        "NCP": [ncp],
+        "CAEC": [caec],
+        "SMOKE": [smoke],
+        "CH2O": [ch2o],
+        "FAF": [faf],
+        "TUE": [tue]
+    })
+
+    input_data = pd.get_dummies(input_data)
+
+    expected_columns = model.feature_names_in_
+
+    for col in expected_columns:
+        if col not in input_data.columns:
+            input_data[col] = 0
+
+    input_data = input_data.reindex(
+        columns=expected_columns,
+        fill_value=0
+    )
+
+    prediction = model.predict(input_data)
+    prediction_text = str(prediction[0])
+
+    st.markdown(
+        f"""
+        <div class="result-box">
+            <h2>Prediction Result</h2>
+            <h1>{prediction_text}</h1>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    if "Obesity" in prediction_text:
+        st.warning(
+            "The model indicates a higher obesity risk. Healthy lifestyle improvements may help reduce health risks."
+        )
+    else:
+        st.info(
+            "The model indicates a lower obesity risk category."
+        )
+
+st.write("")
+st.markdown("---")
+st.caption("Developed using Streamlit and Machine Learning")
